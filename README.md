@@ -53,3 +53,6 @@ python main.py -h
 ```
 python main.py whats-new -o file
 ```
+___  
+#### Автор проекта:    
+:small_orange_diamond: [Поташев Илья](https://github.com/PotashevIlya)
