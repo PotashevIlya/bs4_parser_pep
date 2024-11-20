@@ -3,22 +3,23 @@ import re
 from urllib.parse import urljoin
 
 import requests_cache
-from bs4 import BeautifulSoup
 from tqdm import tqdm
 
 from configs import configure_argument_parser, configure_logging
-from constants import BASE_DIR, DOWNLOADS_DIR_NAME, EXPECTED_STATUS, MAIN_DOC_URL, MAIN_PEPS_URL
+from constants import (
+    BASE_DIR, DOWNLOADS_DIR_NAME, EXPECTED_STATUS,
+    DOWNLOAD_URL, MAIN_DOC_URL, MAIN_PEPS_URL
+)
 from outputs import control_output
-from utils import build_dir, find_tag, get_response
+from utils import build_dir, get_response, find_tag, prepare_soup
 
 
 def whats_new(session):
     whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
     response = get_response(session, whats_new_url)
-    if response is None:
-        return
     main_div = find_tag(
-        BeautifulSoup(response.text, features='lxml'), 'section',
+        prepare_soup(response),
+        'section',
         attrs={'id': 'what-s-new-in-python'}
     )
     div_with_ul = find_tag(main_div, 'div', attrs={'class': 'toctree-wrapper'})
@@ -30,9 +31,7 @@ def whats_new(session):
         version_a_tag = section.find('a')
         version_link = urljoin(whats_new_url, version_a_tag['href'])
         response = get_response(session, version_link)
-        if response is None:
-            continue
-        soup = BeautifulSoup(response.text, 'lxml')
+        soup = prepare_soup(response)
         h1 = find_tag(soup, 'h1')
         dl = find_tag(soup, 'dl')
         dl_text = dl.text.replace('\n', ' ')
@@ -44,10 +43,8 @@ def whats_new(session):
 
 def latest_versions(session):
     response = get_response(session, MAIN_DOC_URL)
-    if response is None:
-        return
     sidebar = find_tag(
-        BeautifulSoup(response.text, features='lxml'),
+        prepare_soup(response),
         'div',
         attrs={'class': 'sphinxsidebarwrapper'}
     )
@@ -74,12 +71,9 @@ def latest_versions(session):
 
 
 def download(session):
-    downloads_url = urljoin(MAIN_DOC_URL, 'download.html')
-    response = get_response(session, downloads_url)
-    if response is None:
-        return
+    response = get_response(session, DOWNLOAD_URL)
     table_tag = find_tag(
-        BeautifulSoup(response.text, features='lxml'),
+        prepare_soup(response),
         'table',
         attrs={'class': 'docutils'}
     )
@@ -88,7 +82,7 @@ def download(session):
         'a',
         {'href': re.compile(r'.+pdf-a4\.zip$')}
     )
-    archive_url = urljoin(downloads_url, pdf_a4_tag['href'])
+    archive_url = urljoin(DOWNLOAD_URL, pdf_a4_tag['href'])
     dir = build_dir(BASE_DIR, DOWNLOADS_DIR_NAME)
     archive_path = dir / archive_url.split('/')[-1]
     response = session.get(archive_url)
@@ -112,9 +106,7 @@ def pep(session):
         'Total': 0
     }
     response = get_response(session, MAIN_PEPS_URL)
-    if response is None:
-        return
-    all_tables = BeautifulSoup(response.text, features='lxml').find_all(
+    all_tables = prepare_soup(response).find_all(
         'table',
         attrs={'class': 'pep-zero-table docutils align-default'}
     )
@@ -141,10 +133,8 @@ def pep(session):
                 )['href']
             )
             response = get_response(session, pep_link)
-            if response is None:
-                return
             main_dl = find_tag(
-                BeautifulSoup(response.text, features='lxml'),
+                prepare_soup(response),
                 'dl'
             )
             pre_status_section = main_dl.find(string='Status').parent

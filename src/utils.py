@@ -1,20 +1,29 @@
 import logging
 
+from bs4 import BeautifulSoup
 from requests import RequestException
 
-from exceptions import ParserFindTagException
+from exceptions import EmptyResponseException, ParserFindTagException
 
 
 def get_response(session, url):
     try:
         response = session.get(url)
         response.encoding = 'utf-8'
+        if response is None:
+            raise EmptyResponseException(
+                f'Вернулся пустой ответ при запросе на {url}'
+            )
         return response
     except RequestException:
         logging.exception(
             f'Возникла ошибка при загрузке страницы {url}',
             stack_info=True
         )
+
+
+def prepare_soup(response):
+    return BeautifulSoup(response.text, features='lxml')
 
 
 def find_tag(soup, tag, attrs=None):

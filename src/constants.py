@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import urljoin
 
 BASE_DIR = Path(__file__).parent
 DOWNLOADS_DIR_NAME = 'downloads'
@@ -14,6 +15,7 @@ DATETIME_FORMAT = '%Y-%m-%d_%H-%M-%S'
 
 MAIN_DOC_URL = 'https://docs.python.org/3/'
 MAIN_PEPS_URL = 'https://peps.python.org/'
+DOWNLOAD_URL = urljoin(MAIN_DOC_URL, 'download.html')
 
 EXPECTED_STATUS = {
     'A': ('Active', 'Accepted'),
