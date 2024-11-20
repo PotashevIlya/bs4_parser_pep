@@ -13,6 +13,8 @@ FILE_OUTPUT_ARG = 'file'
 
 DATETIME_FORMAT = '%Y-%m-%d_%H-%M-%S'
 
+DEFAULT_ENCODING = 'utf-8'
+
 MAIN_DOC_URL = 'https://docs.python.org/3/'
 MAIN_PEPS_URL = 'https://peps.python.org/'
 DOWNLOAD_URL = urljoin(MAIN_DOC_URL, 'download.html')
