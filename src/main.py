@@ -9,7 +9,7 @@ from tqdm import tqdm
 from configs import configure_argument_parser, configure_logging
 from constants import BASE_DIR, DOWNLOADS_DIR_NAME, EXPECTED_STATUS, MAIN_DOC_URL, MAIN_PEPS_URL
 from outputs import control_output
-from utils import find_tag, get_response
+from utils import build_dir, find_tag, get_response
 
 
 def whats_new(session):
@@ -89,9 +89,8 @@ def download(session):
         {'href': re.compile(r'.+pdf-a4\.zip$')}
     )
     archive_url = urljoin(downloads_url, pdf_a4_tag['href'])
-    download_dir = BASE_DIR / DOWNLOADS_DIR_NAME
-    download_dir.mkdir(exist_ok=True)
-    archive_path = download_dir / archive_url.split('/')[-1]
+    dir = build_dir(BASE_DIR, DOWNLOADS_DIR_NAME)
+    archive_path = dir / archive_url.split('/')[-1]
     response = session.get(archive_url)
     with open(archive_path, 'wb') as file:
         file.write(response.content)

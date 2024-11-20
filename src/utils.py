@@ -24,3 +24,9 @@ def find_tag(soup, tag, attrs=None):
         logging.error(error_msg, stack_info=True)
         raise ParserFindTagException(error_msg)
     return searched_tag
+
+
+def build_dir(base_dir, subdir):
+    dir = base_dir / subdir
+    dir.mkdir(exist_ok=True)
+    return dir

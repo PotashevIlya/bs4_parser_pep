@@ -9,6 +9,8 @@ from constants import (
     PRETTY_OUTPUT_ARG, RESULTS_DIR_NAME
 )
 
+from utils import build_dir
+
 
 WHERE_IS_FILE_MESSAGE = 'Файл сохранён. Путь: {path}'
 
@@ -31,12 +33,11 @@ def pretty_output(results, *args):
 
 
 def file_output(results, cli_args):
-    results_dir = BASE_DIR / RESULTS_DIR_NAME
-    results_dir.mkdir(exist_ok=True)
+    dir = build_dir(BASE_DIR, RESULTS_DIR_NAME)
     parser_mode = cli_args.mode
     now = dt.datetime.now().strftime(DATETIME_FORMAT)
     file_name = f'{parser_mode}_{now}.csv'
-    file_path = results_dir / file_name
+    file_path =  dir / file_name
     with open(file_path, 'w', encoding='utf-8') as f:
         writer = csv.writer(f, dialect=csv.unix_dialect)
         writer.writerows(results)
