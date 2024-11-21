@@ -11,34 +11,32 @@ from constants import (
     DOWNLOAD_URL, MAIN_DOC_URL, MAIN_PEPS_URL
 )
 from outputs import control_output
-from utils import build_dir, get_response, find_tag, prepare_soup
+from utils import build_dir, find_tag, prepare_soup
 
 WHERE_IS_ARCHIVE_MESSAGE = 'Архив загружен. Путь: {path}'
 START_PARSING_MESSAGE = 'Парсер запущен!'
 STOP_PARSING_MESSAGE = 'Парсер завершил работу!'
 CLI_ARGS_MESSAGE = 'Аргументы командной строки: {args}'
 NO_PREVIEW_MESSAGE = 'Нет превью в таблице у PEP - {peps}'
-NON_MATCHING_STATUSES_MESSAGE = ('Несовпадающие статусы:\n'
-                                 '{}\n'
-                                 'Статус в карточке: {}\n'
-                                 'Ожидаемые статусы: {}'
-                                 )
+NON_MATCHING_STATUSES_MESSAGE = (
+    'Несовпадающие статусы:\n'
+    '{}\n'
+    'Статус в карточке: {}\n'
+    'Ожидаемые статусы: {}'
+)
 ERROR_MESSAGE = 'Сбой в работе программы. Ошибка: {err}'
 
 
 def whats_new(session):
     whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
-    response = get_response(session, whats_new_url)
-    sections_by_python = prepare_soup(response).select(
-        '#what-s-new-in-python div.toctree-wrapper li.toctree-l1'
+    all_a_tags = prepare_soup(session, whats_new_url).select(
+        '#what-s-new-in-python div.toctree-wrapper li.toctree-l1 > a.reference'
     )
-    sections_by_python.pop()
+    all_a_tags.pop()
     results = [('Ссылка на статью', 'Заголовок', 'Редактор, автор')]
-    for section in tqdm(sections_by_python):
-        version_a_tag = section.find('a')
-        version_link = urljoin(whats_new_url, version_a_tag['href'])
-        response = get_response(session, version_link)
-        soup = prepare_soup(response)
+    for tag in tqdm(all_a_tags):
+        version_link = urljoin(whats_new_url, tag['href'])
+        soup = prepare_soup(session, version_link)
         results.append(
             (
                 version_link,
@@ -50,9 +48,8 @@ def whats_new(session):
 
 
 def latest_versions(session):
-    response = get_response(session, MAIN_DOC_URL)
     sidebar = find_tag(
-        prepare_soup(response),
+        prepare_soup(session, MAIN_DOC_URL),
         'div',
         attrs={'class': 'sphinxsidebarwrapper'}
     )
@@ -73,8 +70,7 @@ def latest_versions(session):
 
 
 def download(session):
-    response = get_response(session, DOWNLOAD_URL)
-    soup = prepare_soup(response)
+    soup = prepare_soup(session, DOWNLOAD_URL)
     archive_url = urljoin(
         DOWNLOAD_URL,
         soup.select_one('table.docutils td > [href*="pdf-a4.zip"]')['href']
@@ -91,8 +87,7 @@ def pep(session):
     statuses_counter = {}
     peps_with_no_preview = []
     non_matching_statuses = []
-    response = get_response(session, MAIN_PEPS_URL)
-    all_tables = prepare_soup(response).find_all(
+    all_tables = prepare_soup(session, MAIN_PEPS_URL).find_all(
         'table',
         attrs={'class': 'pep-zero-table docutils align-default'}
     )
@@ -117,9 +112,8 @@ def pep(session):
                     attrs={'class': 'pep reference internal'}
                 )['href']
             )
-            response = get_response(session, pep_link)
             main_dl = find_tag(
-                prepare_soup(response),
+                prepare_soup(session, pep_link),
                 'dl'
             )
             pre_status_section = main_dl.find(string='Status').parent

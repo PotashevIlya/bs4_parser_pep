@@ -1,8 +1,8 @@
 from bs4 import BeautifulSoup
 from requests import RequestException
 
-from constants import DEFAULT_ENCODING
-from exceptions import EmptyResponseException, ParserFindTagException
+from constants import DEFAULT_ENCODING, DEFAULT_FEATURE
+from exceptions import ParserFindTagException
 
 REQUEST_ERROR = 'Не удалось загрузить страницу {url}. Ошибка: {err}'
 EMPTY_RESPONSE = 'Вернулся пустой ответ при запросе на {url}'
@@ -13,10 +13,6 @@ def get_response(session, url, encoding=DEFAULT_ENCODING):
     try:
         response = session.get(url)
         response.encoding = encoding
-        if response is None:
-            raise EmptyResponseException(
-                EMPTY_RESPONSE.format(url=url)
-            )
         return response
     except RequestException as err:
         raise ConnectionError(
@@ -24,8 +20,9 @@ def get_response(session, url, encoding=DEFAULT_ENCODING):
         )
 
 
-def prepare_soup(response):
-    return BeautifulSoup(response.text, features='lxml')
+def prepare_soup(session, url, features=DEFAULT_FEATURE):
+    response = get_response(session, url)
+    return BeautifulSoup(response.text, features=features)
 
 
 def find_tag(soup, tag, attrs=None):
