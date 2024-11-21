@@ -13,6 +13,8 @@ from constants import (
 from outputs import control_output
 from utils import build_dir, get_response, find_tag, prepare_soup
 
+WHERE_IS_ARCHIVE_MESSAGE = 'Архив загружен. Путь: {path}'
+
 
 def whats_new(session):
     whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
@@ -62,23 +64,17 @@ def latest_versions(session):
 
 def download(session):
     response = get_response(session, DOWNLOAD_URL)
-    table_tag = find_tag(
-        prepare_soup(response),
-        'table',
-        attrs={'class': 'docutils'}
+    soup = prepare_soup(response)
+    archive_url = urljoin(
+        DOWNLOAD_URL,
+        soup.select_one('table.docutils td > [href*="pdf-a4.zip"]')['href']
     )
-    pdf_a4_tag = find_tag(
-        table_tag,
-        'a',
-        {'href': re.compile(r'.+pdf-a4\.zip$')}
-    )
-    archive_url = urljoin(DOWNLOAD_URL, pdf_a4_tag['href'])
     dir = build_dir(BASE_DIR, DOWNLOADS_DIR_NAME)
     archive_path = dir / archive_url.split('/')[-1]
     response = session.get(archive_url)
     with open(archive_path, 'wb') as file:
         file.write(response.content)
-    logging.info(f'Архив был загружен и сохранён: {archive_path}')
+    logging.info(WHERE_IS_ARCHIVE_MESSAGE.format(path=archive_path))
 
 
 def pep(session):
