@@ -17,8 +17,7 @@ from utils import build_dir, get_response, find_tag, prepare_soup
 def whats_new(session):
     whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
     response = get_response(session, whats_new_url)
-    soup = prepare_soup(response)
-    sections_by_python = soup.select(
+    sections_by_python = prepare_soup(response).select(
         '#what-s-new-in-python div.toctree-wrapper li.toctree-l1'
     )
     sections_by_python.pop()
@@ -45,24 +44,18 @@ def latest_versions(session):
         'div',
         attrs={'class': 'sphinxsidebarwrapper'}
     )
-    ul_tags = sidebar.find_all('ul')
-    for ul in ul_tags:
-        if 'All versions' in ul.text:
-            a_tags = ul.find_all('a')
-            break
-        else:
-            raise Exception('Ничего не нашлось')
+    ul_tag = sidebar.find('ul')
+    a_tags = ul_tag.find_all('a')
     results = [('Ссылка на документацию', 'Версия', 'Статус')]
     pattern = r'Python (?P<version>\d\.\d+) \((?P<status>.*)\)'
     for a_tag in a_tags:
-        link = a_tag['href']
         text_match = re.search(pattern, a_tag.text)
         if text_match is not None:
             version, status = text_match.groups()
         else:
             version, status = a_tag.text, ''
         results.append(
-            (link, version, status)
+            (a_tag['href'], version, status)
         )
     return results
 
