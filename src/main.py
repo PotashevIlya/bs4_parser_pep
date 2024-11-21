@@ -34,12 +34,14 @@ def whats_new(session):
         '#what-s-new-in-python div.toctree-wrapper li.toctree-l1 > a.reference'
     )
     results = [('Ссылка на статью', 'Заголовок', 'Редактор, автор')]
+    error_requests = []
     for tag in tqdm(all_a_tags):
         version_link = urljoin(whats_new_url, tag['href'])
         try:
             soup = prepare_soup(session, version_link)
         except ConnectionError as err:
-            logging.error(REQUEST_ERROR.format(url=version_link, err=err))
+            error_requests.append((version_link, err))
+            continue
         results.append(
             (
                 version_link,
@@ -47,6 +49,8 @@ def whats_new(session):
                 find_tag(soup, 'dl').text.replace('\n', ' ')
             )
         )
+    for details in error_requests:
+        logging.error(REQUEST_ERROR.format(*details))
     return results
 
 
@@ -90,6 +94,7 @@ def pep(session):
     statuses_counter = defaultdict(int)
     peps_with_no_preview = []
     non_matching_statuses = []
+    error_requests = []
     all_tables = prepare_soup(session, MAIN_PEPS_URL).find_all(
         'table',
         attrs={'class': 'pep-zero-table docutils align-default'}
@@ -121,7 +126,8 @@ def pep(session):
                     'dl'
                 )
             except ConnectionError as err:
-                logging.error(REQUEST_ERROR.format(url=pep_link, err=err))
+                error_requests.append((pep_link, err))
+                continue
             pre_status_section = main_dl.find(string='Status').parent
             status = pre_status_section.find_next_sibling().string
             statuses_counter[status] += 1
@@ -135,6 +141,10 @@ def pep(session):
     for details in non_matching_statuses:
         logging.info(
             NON_MATCHING_STATUSES_MESSAGE.format(*details)
+        )
+    for details in error_requests:
+        logging.error(
+            REQUEST_ERROR.format(*details)
         )
     return [
         ('Статус', 'Количество'),
