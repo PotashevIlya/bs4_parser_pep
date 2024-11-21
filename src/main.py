@@ -12,7 +12,7 @@ from constants import (
     DOWNLOAD_URL, MAIN_DOC_URL, MAIN_PEPS_URL
 )
 from outputs import control_output
-from utils import build_dir, find_tag, prepare_soup
+from utils import build_dir, find_tag, prepare_soup, REQUEST_ERROR
 
 WHERE_IS_ARCHIVE_MESSAGE = 'Архив загружен. Путь: {path}'
 START_PARSING_MESSAGE = 'Парсер запущен!'
@@ -33,11 +33,13 @@ def whats_new(session):
     all_a_tags = prepare_soup(session, whats_new_url).select(
         '#what-s-new-in-python div.toctree-wrapper li.toctree-l1 > a.reference'
     )
-    all_a_tags.pop()
     results = [('Ссылка на статью', 'Заголовок', 'Редактор, автор')]
     for tag in tqdm(all_a_tags):
         version_link = urljoin(whats_new_url, tag['href'])
-        soup = prepare_soup(session, version_link)
+        try:
+            soup = prepare_soup(session, version_link)
+        except ConnectionError as err:
+            logging.error(REQUEST_ERROR.format(url=version_link, err=err))
         results.append(
             (
                 version_link,
@@ -113,10 +115,13 @@ def pep(session):
                     attrs={'class': 'pep reference internal'}
                 )['href']
             )
-            main_dl = find_tag(
-                prepare_soup(session, pep_link),
-                'dl'
-            )
+            try:
+                main_dl = find_tag(
+                    prepare_soup(session, pep_link),
+                    'dl'
+                )
+            except ConnectionError as err:
+                logging.error(REQUEST_ERROR.format(url=pep_link, err=err))
             pre_status_section = main_dl.find(string='Status').parent
             status = pre_status_section.find_next_sibling().string
             statuses_counter[status] += 1

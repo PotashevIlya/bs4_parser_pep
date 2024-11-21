@@ -21,8 +21,7 @@ def get_response(session, url, encoding=DEFAULT_ENCODING):
 
 
 def prepare_soup(session, url, features=DEFAULT_FEATURE):
-    response = get_response(session, url)
-    return BeautifulSoup(response.text, features=features)
+    return BeautifulSoup(get_response(session, url).text, features=features)
 
 
 def find_tag(soup, tag, attrs=None):

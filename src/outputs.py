@@ -39,7 +39,7 @@ def file_output(results, cli_args):
     logging.info(WHERE_IS_FILE_MESSAGE.format(path=file_path))
 
 
-FUNCTIONS_TO_OUTPUT = {
+OUTPUT_FINCTIONS = {
     FILE_OUTPUT_ARG: file_output,
     PRETTY_OUTPUT_ARG: pretty_output,
     None: default_output
@@ -47,4 +47,4 @@ FUNCTIONS_TO_OUTPUT = {
 
 
 def control_output(results, cli_args):
-    FUNCTIONS_TO_OUTPUT[cli_args.output](results, cli_args)
+    OUTPUT_FINCTIONS[cli_args.output](results, cli_args)
