@@ -1,3 +1,4 @@
+from collections import defaultdict
 import logging
 import re
 from urllib.parse import urljoin
@@ -84,7 +85,7 @@ def download(session):
 
 
 def pep(session):
-    statuses_counter = {}
+    statuses_counter = defaultdict(int)
     peps_with_no_preview = []
     non_matching_statuses = []
     all_tables = prepare_soup(session, MAIN_PEPS_URL).find_all(
@@ -118,8 +119,6 @@ def pep(session):
             )
             pre_status_section = main_dl.find(string='Status').parent
             status = pre_status_section.find_next_sibling().string
-            if status not in statuses_counter:
-                statuses_counter.setdefault(status, 0)
             statuses_counter[status] += 1
             if status not in EXPECTED_STATUS[preview_status]:
                 non_matching_statuses.append(
@@ -150,20 +149,20 @@ MODE_TO_FUNCTION = {
 def main():
     configure_logging()
     logging.info(START_PARSING_MESSAGE)
-    args = configure_argument_parser(MODE_TO_FUNCTION.keys()).parse_args()
-    logging.info(CLI_ARGS_MESSAGE.format(args=args))
-    session = requests_cache.CachedSession()
-    if args.clear_cache:
-        session.cache.clear()
-    parser_mode = args.mode
     try:
+        args = configure_argument_parser(MODE_TO_FUNCTION.keys()).parse_args()
+        logging.info(CLI_ARGS_MESSAGE.format(args=args))
+        session = requests_cache.CachedSession()
+        if args.clear_cache:
+            session.cache.clear()
+        parser_mode = args.mode
         results = MODE_TO_FUNCTION[parser_mode](session)
+        if results is not None:
+            control_output(results, args)
     except Exception as err:
         logging.error(
             ERROR_MESSAGE.format(err=err)
         )
-    if results is not None:
-        control_output(results, args)
     logging.info(STOP_PARSING_MESSAGE)
 
 
