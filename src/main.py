@@ -40,7 +40,9 @@ def whats_new(session):
         try:
             soup = prepare_soup(session, version_link)
         except ConnectionError as err:
-            error_requests.append((version_link, err))
+            error_requests.append(
+                REQUEST_ERROR.format(url=version_link, err=err)
+            )
             continue
         results.append(
             (
@@ -49,8 +51,8 @@ def whats_new(session):
                 find_tag(soup, 'dl').text.replace('\n', ' ')
             )
         )
-    for details in error_requests:
-        logging.error(REQUEST_ERROR.format(*details))
+    for error in error_requests:
+        logging.error(error)
     return results
 
 
@@ -126,7 +128,9 @@ def pep(session):
                     'dl'
                 )
             except ConnectionError as err:
-                error_requests.append((pep_link, err))
+                error_requests.append(
+                    REQUEST_ERROR.format(url=pep_link, err=err)
+                )
                 continue
             pre_status_section = main_dl.find(string='Status').parent
             status = pre_status_section.find_next_sibling().string
@@ -142,9 +146,9 @@ def pep(session):
         logging.info(
             NON_MATCHING_STATUSES_MESSAGE.format(*details)
         )
-    for details in error_requests:
+    for error in error_requests:
         logging.error(
-            REQUEST_ERROR.format(*details)
+            error
         )
     return [
         ('Статус', 'Количество'),
