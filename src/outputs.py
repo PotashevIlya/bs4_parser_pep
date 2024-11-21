@@ -37,7 +37,7 @@ def file_output(results, cli_args):
     parser_mode = cli_args.mode
     now = dt.datetime.now().strftime(DATETIME_FORMAT)
     file_name = f'{parser_mode}_{now}.csv'
-    file_path =  dir / file_name
+    file_path = dir / file_name
     with open(file_path, 'w', encoding='utf-8') as f:
         writer = csv.writer(f, dialect=csv.unix_dialect)
         writer.writerows(results)

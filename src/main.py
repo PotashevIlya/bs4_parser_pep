@@ -14,6 +14,16 @@ from outputs import control_output
 from utils import build_dir, get_response, find_tag, prepare_soup
 
 WHERE_IS_ARCHIVE_MESSAGE = 'Архив загружен. Путь: {path}'
+START_PARSING_MESSAGE = 'Парсер запущен!'
+STOP_PARSING_MESSAGE = 'Парсер завершил работу!'
+CLI_ARGS_MESSAGE = 'Аргументы командной строки: {args}'
+NO_PREVIEW_MESSAGE = 'Нет превью в таблице у PEP - {peps}'
+NON_MATCHING_STATUSES_MESSAGE = ('Несовпадающие статусы:\n'
+                                 '{}\n'
+                                 'Статус в карточке: {}\n'
+                                 'Ожидаемые статусы: {}'
+                                 )
+ERROR_MESSAGE = 'Сбой в работе программы. Ошибка: {err}'
 
 
 def whats_new(session):
@@ -78,19 +88,9 @@ def download(session):
 
 
 def pep(session):
-    statuses_counter = {
-        'Accepted': 0,
-        'Active': 0,
-        'Deferred': 0,
-        'Draft': 0,
-        'Final': 0,
-        'Provisional': 0,
-        'Rejected': 0,
-        'Superseded': 0,
-        'Withdrawn': 0,
-        'Any statuses': 0,
-        'Total': 0
-    }
+    statuses_counter = {}
+    peps_with_no_preview = []
+    non_matching_statuses = []
     response = get_response(session, MAIN_PEPS_URL)
     all_tables = prepare_soup(response).find_all(
         'table',
@@ -99,16 +99,15 @@ def pep(session):
     for current_table in tqdm(all_tables):
         table_body = find_tag(current_table, 'tbody')
         table_rows = table_body.find_all('tr')
-        for current_row in tqdm(table_rows):
+        for current_row in table_rows:
             try:
                 preview_status = current_row.find('abbr').text[1:]
             except AttributeError:
                 preview_status = ''
-                error_tag = current_row.find(
-                    attrs={'class': 'pep reference internal'}
-                )
-                logging.exception(
-                    f'Нет типа и статуса в таблице у PEP - {error_tag.text}'
+                peps_with_no_preview.append(
+                    current_row.find(
+                        attrs={'class': 'pep reference internal'}
+                    ).text
                 )
             pep_link = urljoin(
                 MAIN_PEPS_URL,
@@ -125,20 +124,25 @@ def pep(session):
             )
             pre_status_section = main_dl.find(string='Status').parent
             status = pre_status_section.find_next_sibling().string
-            if status not in EXPECTED_STATUS[preview_status]:
-                logging.info(
-                    'Несовпадающие статусы:\n'
-                    f'{pep_link}\n'
-                    f'Статус в карточке: {status}\n'
-                    f'Ожидаемые статусы: {EXPECTED_STATUS[preview_status]}'
-                )
-                statuses_counter['Any statuses'] += 1
-                continue
+            if status not in statuses_counter:
+                statuses_counter.setdefault(status, 0)
             statuses_counter[status] += 1
-    statuses_counter['Total'] = sum(statuses_counter.values())
-    results = [('Статус', 'Количество')]
-    results.extend(statuses_counter.items())
-    return results
+            if status not in EXPECTED_STATUS[preview_status]:
+                non_matching_statuses.append(
+                    (pep_link, status, EXPECTED_STATUS[preview_status])
+                )
+    logging.info(
+        NO_PREVIEW_MESSAGE.format(peps=peps_with_no_preview)
+    )
+    for details in non_matching_statuses:
+        logging.info(
+            NON_MATCHING_STATUSES_MESSAGE.format(*details)
+        )
+    return [
+        ('Статус', 'Количество'),
+        *statuses_counter.items(),
+        ('Всего', sum(statuses_counter.values()))
+    ]
 
 
 MODE_TO_FUNCTION = {
@@ -151,17 +155,22 @@ MODE_TO_FUNCTION = {
 
 def main():
     configure_logging()
-    logging.info('Парсер запущен!')
+    logging.info(START_PARSING_MESSAGE)
     args = configure_argument_parser(MODE_TO_FUNCTION.keys()).parse_args()
-    logging.info(f'Аргументы командной строки: {args}')
+    logging.info(CLI_ARGS_MESSAGE.format(args=args))
     session = requests_cache.CachedSession()
     if args.clear_cache:
         session.cache.clear()
     parser_mode = args.mode
-    results = MODE_TO_FUNCTION[parser_mode](session)
+    try:
+        results = MODE_TO_FUNCTION[parser_mode](session)
+    except Exception as err:
+        logging.error(
+            ERROR_MESSAGE.format(err=err)
+        )
     if results is not None:
         control_output(results, args)
-    logging.info('Парсер завершил работу.')
+    logging.info(STOP_PARSING_MESSAGE)
 
 
 if __name__ == '__main__':
